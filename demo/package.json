@@ -1,0 +1,27 @@
+{
+    "name": "demo",
+    "version": "0.0.0",
+    "description": "",
+    "keywords": [],
+    "author": "Aleph Ofosev <aofosev@gmail.com>",
+    "license": "MIT",
+    "private": true,
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yard58/ui-kit.git"
+    },
+    "homepage": "https://github.com/yard58/ui-kit#readme",
+    "bugs": {
+        "url": "https://github.com/yard58/ui-kit/issues"
+    },
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "devDependencies": {
+        "vite": "^6.3.5",
+        "typescript": "^5.8.3"
+    }
+}

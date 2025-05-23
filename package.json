@@ -1,0 +1,46 @@
+{
+    "name": "vite-plugin-modhtml",
+    "version": "1.0.0",
+    "description": "Vite plugin to include HTML partial files",
+    "keywords": [
+        "vite",
+        "vite-plugin",
+        "modhtml",
+        "include",
+        "html"
+    ],
+    "author": "Aleph Ofosev <aofosev@gmail.com>",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yard58/modhtml.git"
+    },
+    "homepage": "https://github.com/yard58/modhtml#readme",
+    "bugs": {
+        "url": "https://github.com/yard58/modhtml/issues"
+    },
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "scripts": {
+        "build": "vite build",
+        "prepublishOnly": "npm run build",
+        "publish": ""
+    },
+    "peerDependencies": {
+        "parse5": "^7.3.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.15.21",
+        "typescript": "^5.8.3",
+        "vite": "^6.3.5",
+        "vite-plugin-dts": "^4.5.4",
+        "rollup": "^4.41.0"
+    }
+}
