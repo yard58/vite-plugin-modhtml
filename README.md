@@ -2,7 +2,7 @@
 
 mo∂HTML stands for **mod**ular **HTML**. It is a set of web components and plugins that ease the management of HTML by allowing to decompose an HTML webapp into smaller chunks.
 
-This Vite plugin replaces `<modhtml-include src="path"><modhtml-include/>` tags with the contents of the HTML file referenced by the src attribute. Note that the src attribute is a path relative to the location of the file where the `<modhtml-include>` element appears. Referenced files can in turn include other files, recursively. Circular inclusions are detected and generate an error.
+This Vite plugin replaces `<modhtml-include src="path"><modhtml-include/>` tags with the contents of the HTML file referenced by the `src` attribute. Note that the `src` attribute is a path relative to the location of the file where the `<modhtml-include>` element appears. Referenced files can in turn include other files, recursively. Circular inclusions are detected and generate an error.
 
 ## Usage
 
