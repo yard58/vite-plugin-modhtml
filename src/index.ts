@@ -38,14 +38,20 @@ export default function modhtml(): Plugin {
             const document = parse(html);
 
             // Recursive inliner
-            const inlineNodes = (parent: any, baseDir: string, visited: string[] = []) => {
+            const inlineNodes = (parent: any, siteBaseDir: string, baseDir: string, visited: string[] = []) => {
                 const children = parent.childNodes || [];
                 for (let i = 0; i < children.length; i++) {
                     const node = children[i];
                     if (node.tagName === 'modhtml-include') {
                         const srcAttr = node.attrs.find((a: any) => a.name === 'src');
                         if (srcAttr) {
-                            const srcPath = path.resolve(baseDir, srcAttr.value);
+                            let relSrc = srcAttr.value;
+                            let relBaseDir = baseDir;
+                            if(relSrc[0] === '/') {
+                                relSrc = relSrc.replace(/^\/+/, '');
+                                relBaseDir = siteBaseDir; 
+                            }
+                            const srcPath = path.resolve(relBaseDir, relSrc);
                             if (visited.includes(srcPath)) {
                                 // Circular include detected
                                 const cycle = visited.concat(srcPath)
@@ -58,7 +64,7 @@ export default function modhtml(): Plugin {
                             try {
                                 fileContents = fs.readFileSync(srcPath, 'utf8');
                             } catch (err) {
-                                console.error(`y58-include: could not read '${srcAttr.value}'`, err);
+                                console.error(`modhtml-include: Can't read '${srcAttr.value}'`, err);
                                 children.splice(i, 1);
                                 i--;
                                 continue;
@@ -66,7 +72,7 @@ export default function modhtml(): Plugin {
                             // Parse fragment and inline its own includes
                             const frag = parseFragment(fileContents);
                             const fragBaseDir = path.dirname(srcPath);
-                            inlineNodes(frag, fragBaseDir, visited.concat(srcPath));
+                            inlineNodes(frag, siteBaseDir, fragBaseDir, visited.concat(srcPath));
 
                             // Replace the <modhtml-include> node with the fragment's children
                             children.splice(i, 1, ...frag.childNodes);
@@ -76,7 +82,7 @@ export default function modhtml(): Plugin {
                     }
                     // Recurse into other nodes
                     if (node.childNodes) {
-                        inlineNodes(node, baseDir, visited);
+                        inlineNodes(node, siteBaseDir, baseDir, visited);
                     }
                 }
             };
@@ -84,7 +90,7 @@ export default function modhtml(): Plugin {
             const relHtmlPath = ctx.path.replace(/^\/+/, '');
             const htmlFile = path.resolve(config.root, relHtmlPath);
             const htmlBaseDir = path.dirname(htmlFile);
-            inlineNodes(document, htmlBaseDir);
+            inlineNodes(document, htmlBaseDir, htmlBaseDir);
 
             // Serialize back to HTML
             return serialize(document);
