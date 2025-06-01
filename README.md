@@ -82,6 +82,7 @@ Then after running your `vite build` script, your dist folder will contain the f
 </html>
 ```
 
+You can also use `vite dev` to directly see the result. The page will refresh automatically if you change any of the included files.
 
 
 
