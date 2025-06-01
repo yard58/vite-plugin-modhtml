@@ -1,0 +1,140 @@
+import type {
+  Plugin,
+  ResolvedConfig,
+  ViteDevServer,
+  IndexHtmlTransformResult
+} from 'vite';
+import { parse, parseFragment, serialize } from 'parse5';
+import fs from 'fs';
+import path from 'path';
+
+interface TransformIndexHtmlContext {
+  path: string;
+  filename: string;
+  server?: ViteDevServer;
+  bundle?: import('rollup').OutputBundle;
+  chunk?: import('rollup').OutputChunk;
+}
+
+export default function modhtml(): Plugin {
+  let config: ResolvedConfig;
+
+  // Keep track of every file we inlined during the last transformIndexHtml.
+  // We’ll use this in handleHotUpdate to know “does this changed file 
+  // correspond to one of our <modhtml-include> fragments?”
+  const inlinedFiles = new Set<string>();
+
+  return {
+    name: 'vite-plugin-modhtml',
+    enforce: 'pre',
+
+    configResolved(resolvedConfig: ResolvedConfig) {
+      config = resolvedConfig;
+    },
+
+    /**
+     * transformIndexHtml must return either a string or an IndexHtmlTransformResult
+     * (which in Vite 6.x only has { html?: string; tags?: HtmlTagDescriptor[] }).
+     * We do NOT return { deps: [...] } because Vite 6.3’s type does not allow it.
+     */
+    transformIndexHtml(
+      html: string,
+      ctx: TransformIndexHtmlContext
+    ): string {
+      // Each time we run transformIndexHtml, clear the previous set
+      inlinedFiles.clear();
+
+      const document = parse(html);
+
+      const inlineNodes = (
+        parent: any,
+        siteBaseDir: string,
+        baseDir: string,
+        visited: string[] = []
+      ) => {
+        const children = parent.childNodes || [];
+        for (let i = 0; i < children.length; i++) {
+          const node = children[i];
+          if (node.tagName === 'modhtml-include') {
+            const srcAttr = node.attrs.find((a: any) => a.name === 'src');
+            if (srcAttr) {
+              let relSrc = srcAttr.value;
+              let relBaseDir = baseDir;
+
+              // If it starts with "/", treat it as root‐relative
+              if (relSrc[0] === '/') {
+                relSrc = relSrc.replace(/^\/+/, '');
+                relBaseDir = siteBaseDir;
+              }
+
+              const srcPath = path.resolve(relBaseDir, relSrc);
+
+              // Record that we inlined this file, so HMR knows to watch it
+              inlinedFiles.add(srcPath);
+
+              if (visited.includes(srcPath)) {
+                // Circular include detected
+                const cycle = visited
+                  .concat(srcPath)
+                  .map((p) => path.relative(config.root, p))
+                  .join(' -> ');
+                throw new Error(
+                  `[vite-plugin-modhtml] Circular include detected: ${cycle}`
+                );
+              }
+
+              let fileContents: string;
+              try {
+                fileContents = fs.readFileSync(srcPath, 'utf8');
+              } catch (err) {
+                console.error(`modhtml-include: Can't read '${srcAttr.value}'`, err);
+                children.splice(i, 1);
+                i--;
+                continue;
+              }
+
+              // Parse the fragment, recurse, then splice its children in place
+              const frag = parseFragment(fileContents);
+              const fragBaseDir = path.dirname(srcPath);
+              inlineNodes(frag, siteBaseDir, fragBaseDir, visited.concat(srcPath));
+
+              children.splice(i, 1, ...frag.childNodes);
+              i += frag.childNodes.length - 1;
+              continue;
+            }
+          }
+
+          if (node.childNodes) {
+            inlineNodes(node, siteBaseDir, baseDir, visited);
+          }
+        }
+      };
+
+      const relHtmlPath = ctx.path.replace(/^\/+/, '');
+      const htmlFile = path.resolve(config.root, relHtmlPath);
+      const htmlBaseDir = path.dirname(htmlFile);
+
+      inlineNodes(document, htmlBaseDir, htmlBaseDir);
+
+      // We only return a string here (the inlined HTML). Vite 6.x will
+      // serve this as the final HTML—no “deps” property is allowed.
+      return serialize(document);
+    },
+
+    /**
+     * Whenever any file changes on disk, Vite calls handleHotUpdate.
+     * If that file is one of our “inlined” files, we send a full reload.
+     */
+    handleHotUpdate(ctx) {
+      const changed = ctx.file;
+      if (inlinedFiles.has(changed)) {
+        // trigger a full-page reload
+        ctx.server.ws.send({
+          type: 'full-reload',
+          path: '*'
+        });
+      }
+      // return nothing, so Vite continues its normal HMR process afterward
+    }
+  };
+}
