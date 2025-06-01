@@ -55,12 +55,10 @@ For instance:
 <h1>Hello World!</h1>
 ```
 
-> [!IMPORTANT]
 > The `src` attribute can be absolute or relative.
 > - It is absolute if it begins with a `/`. In this case the root is where the `index.html` sits.
 > - Else, it is relative. In this case it is relative to the _including_ file path at build time.
 
-> [!IMPORTANT]
 > Avoid putting your included HTML files in the `public` folder as they would be included in the distribution by Vite. A good practice is to put your included files in a `/partials` folder (and organize them in subfolders if you wish). In this case, in the example above, we would rather have `<modhtml-include src="/partials/hello.html"></modhtml-include>`
 
 Then after running your `vite build` script, your dist folder will contain the following file:
